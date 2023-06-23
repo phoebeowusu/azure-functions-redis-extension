@@ -11,6 +11,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
 {
     internal class StreamTrigger
     {
+        // New instance of CosmosClient class using a connection string
         private static CosmosClient client = new(
             connectionString: Environment.GetEnvironmentVariable("COSMOS_CONNECTION_STRING")!
         );
@@ -22,14 +23,15 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
                 [RedisStreamTrigger(localhostSetting, "streamTest")] string entry,
                 ILogger logger)
         {
-            //parsing information
+
+            // Parsing message
             char[] delimiterChars = { '"', ',', '{', ':', '}' };
             string[] words = entry.Split(delimiterChars);
             words = words.Where(x => !string.IsNullOrEmpty(x)).ToArray();
             string[] vals = new string[words.Length - 3];
             Array.Copy(words, 3, vals, 0, vals.Length);
 
-            //retreiving the database and container
+            // Retrivew CosmosDB database and container
             Cosmos.Database database = await client.CreateDatabaseIfNotExistsAsync(
                 id: "database-id"
             );
@@ -40,18 +42,19 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
                 throughput: 400
             );
 
-            //formatting information
+            // Create new item using message information
             CosmosItem item = new(
                 id: words[1],
                 values: vals
             );
 
-            //upload information into cosmos db
+            // Upload item into CosmosDB container
             CosmosItem upsertedItem = await container.UpsertItemAsync<CosmosItem>(item);
         }
     }
 }
 
+// C# record type for items in the container
 public record CosmosItem(
     string id,
     string[] values
