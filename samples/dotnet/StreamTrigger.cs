@@ -13,9 +13,6 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
 {
     public static class StreamTrigger
     {
-        private static CosmosClient client = new(
-            connectionString: Environment.GetEnvironmentVariable("COSMOS_CONNECTION")!
-        );
         public const string localhostSetting = "REDIS_CONNECTION";
 
         [FunctionName(nameof(StreamTriggerAsync))]
