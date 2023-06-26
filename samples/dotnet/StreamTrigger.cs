@@ -6,7 +6,6 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Configuration;
 using StackExchange.Redis;
-using CosmosDBSamplesV2;
 using Microsoft.WindowsAzure.Storage.Queue.Protocol;
 using Microsoft.Azure.WebJobs;
 
@@ -32,16 +31,11 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
             CosmosItem2 sample = new CosmosItem2 { id = entry.Id, Name = entry.Values[0].ToString() };
             await items.AddAsync(sample);
         }
-
     }
 }
 
-
-namespace CosmosDBSamplesV2
+public class CosmosItem2
 {
-    public class CosmosItem2
-    {
-        public string id { get; set; }
-        public string Name { get; set; }
-    }
+    public string id { get; set; }
+    public string Name { get; set; }
 }
