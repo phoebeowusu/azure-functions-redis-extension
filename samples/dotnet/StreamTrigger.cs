@@ -1,61 +1,47 @@
-﻿using Microsoft.Azure.Cosmos;
-using Microsoft.Extensions.Logging;
-using StackExchange.Redis;
+﻿using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-
+using Microsoft.Azure.Cosmos;
+using System.Linq;
+using System.Collections.Generic;
+using System.Configuration;
+using StackExchange.Redis;
+using CosmosDBSamplesV2;
+using Microsoft.WindowsAzure.Storage.Queue.Protocol;
+using Microsoft.Azure.WebJobs;
 
 namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
 {
-    internal class StreamTrigger
+    public static class StreamTrigger
     {
-        // New instance of CosmosClient class using a connection string
         private static CosmosClient client = new(
-            connectionString: Environment.GetEnvironmentVariable("COSMOS_CONNECTION_STRING")!
+            connectionString: Environment.GetEnvironmentVariable("COSMOS_CONNECTION")!
         );
         public const string localhostSetting = "REDIS_CONNECTION";
-
-        // Inline function to handle the parsing
-        public static Dictionary<string, string> ParseResult(StreamEntry entry) => entry.Values.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
 
         [FunctionName(nameof(StreamTriggerAsync))]
         public static async Task StreamTriggerAsync(
                 [RedisStreamTrigger(localhostSetting, "streamTest")] StreamEntry entry,
+                [CosmosDB(
+                    databaseName: "database-id",
+                    containerName: "container-id",
+                    Connection = "COSMOS_CONNECTION")]
+                    IAsyncCollector<CosmosItem2> items,
                 ILogger logger)
         {
-            var dict = ParseResult(entry);
-            logger.LogInformation($"Read result: Id {entry.Id.ToString()} name {dict["name"]}");
-
-
-            // Retrivew CosmosDB database and container  
-            Cosmos.Database database = await client.CreateDatabaseIfNotExistsAsync(
-                id: "database-id"
-            );
-
-            Cosmos.Container container = await database.CreateContainerIfNotExistsAsync(
-                id: "container-id",
-                partitionKeyPath: "/category",
-                throughput: 400
-            );
-
-            // Create new item using message information
-            CosmosItem item = new(
-                id: entry.Id.ToString(),
-                name: dict["name"]
-            );
-
-            //Unpload item into CosmosDB container
-            CosmosItem upsertedItem = await container.UpsertItemAsync<CosmosItem>(item);
-
+            CosmosItem2 sample = new CosmosItem2 { id = entry.Id, Name = entry.Values[0].ToString() };
+            await items.AddAsync(sample);
         }
+
     }
 }
 
-// C# record type for items in the container
-public record CosmosItem(
-    string id,
-    string name
-);
+
+namespace CosmosDBSamplesV2
+{
+    public class CosmosItem2
+    {
+        public string id { get; set; }
+        public string Name { get; set; }
+    }
+}
