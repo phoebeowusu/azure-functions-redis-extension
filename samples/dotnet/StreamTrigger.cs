@@ -1,5 +1,6 @@
 ﻿using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,21 +18,19 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
         );
         public const string localhostSetting = "REDIS_CONNECTION";
 
+        // Inline function to handle the parsing
+        public static Dictionary<string, string> ParseResult(StreamEntry entry) => entry.Values.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
 
         [FunctionName(nameof(StreamTriggerAsync))]
         public static async Task StreamTriggerAsync(
-                [RedisStreamTrigger(localhostSetting, "streamTest")] string entry,
+                [RedisStreamTrigger(localhostSetting, "streamTest")] StreamEntry entry,
                 ILogger logger)
         {
+            var dict = ParseResult(entry);
+            logger.LogInformation($"Read result: Id {entry.Id.ToString()} name {dict["name"]}");
 
-            // Parsing message
-            char[] delimiterChars = { '"', ',', '{', ':', '}' };
-            string[] words = entry.Split(delimiterChars);
-            words = words.Where(x => !string.IsNullOrEmpty(x)).ToArray();
-            string[] vals = new string[words.Length - 3];
-            Array.Copy(words, 3, vals, 0, vals.Length);
 
-            // Retrivew CosmosDB database and container
+            // Retrivew CosmosDB database and container  
             Cosmos.Database database = await client.CreateDatabaseIfNotExistsAsync(
                 id: "database-id"
             );
@@ -44,12 +43,13 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
 
             // Create new item using message information
             CosmosItem item = new(
-                id: words[1],
-                values: vals
+                id: entry.Id.ToString(),
+                name: dict["name"]
             );
 
-            // Upload item into CosmosDB container
+            //Unpload item into CosmosDB container
             CosmosItem upsertedItem = await container.UpsertItemAsync<CosmosItem>(item);
+
         }
     }
 }
@@ -57,5 +57,5 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
 // C# record type for items in the container
 public record CosmosItem(
     string id,
-    string[] values
+    string name
 );
