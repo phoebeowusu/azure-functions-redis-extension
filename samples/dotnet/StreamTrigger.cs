@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
     {
 
         public const string localhostSetting = "REDIS_CONNECTION";
-        public static ConnectionMultiplexer _redisConnection = ConnectionMultiplexer.Connect("REDIS_CONNECTION");
+        private static readonly IDatabaseAsync redisDB = ConnectionMultiplexer.ConnectAsync("pow-RedTrig.redis.cache.windows.net:6380,password=qSBG6V4sueLHLZMJoqBucrlvCERUgAgE4AzCaA9fBUI=,ssl=True,abortConnect=False,tiebreaker=").Result.GetDatabase();
 
         // Parser helper function for reading results
         public static Dictionary<string, string> ParseResult(StreamEntry entry) => entry.Values.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
@@ -44,11 +44,8 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
             // Insert into CosmosDB asynchronously
             Data sampleItem = new Data { id = entry.Id, values = dict };
             await items.AddAsync(sampleItem);
-
-            // Insert into Redis reading stream asynchronously
-            var db = _redisConnection.GetDatabase();
-            await db.StreamAddAsync("cosmosRead", entry.Values, maxLength: 100);
         }
+
 
         // Write through
         [FunctionName(nameof(WriteThrough))]
@@ -74,12 +71,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
             // Insert into CosmosDB synchronously
             Data sampleItem = new Data { id = entry.Id, values = dict };
             items.Add(sampleItem);
-
-            // Insert into Redis reading stream synchronously
-            var db = _redisConnection.GetDatabase();
-            db.StreamAdd("cosmosRead", entry.Values, maxLength: 100);
         }
-
 
         // Read through - WIP
         [FunctionName(nameof(ReadThrough))]
@@ -93,21 +85,14 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
                 ILogger logger)
         {
             // Search Redis reading stream for value
-            var db = _redisConnection.GetDatabase();
-            var messages = db.StreamRead("cosmosRead", "");
+
 
             // Cache miss
-            if (messages == null)
-            {
 
-                // Not in CosmosDB 
-                if (items.) return;
-
-                // Insert information from CosmosDB to Redis 
-                db.StreamAdd("cosmosRead", "", maxLength: 100);
-            }
+            // Failure: Not in CosmosDB
+            // Insert into Redis reading stream asynchronously
+            //await redisDB.StreamAddAsync("cosmosRead", entry.Values, maxLength: 100);
         }
-
     }
 }
 
