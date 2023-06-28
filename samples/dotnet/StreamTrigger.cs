@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
                 ILogger logger)
         {
             // Read from Redis writing stream
-            logger.LogInformation("ID: {entry.Id.ToString()}");
+            logger.LogInformation("ID: {val}", entry.Id.ToString());
 
             // Map each key value pair
             Dictionary<string, string> dict = ParseResult(entry);
@@ -59,7 +59,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
                 ILogger logger)
         {
             // Read from Redis writing stream
-            logger.LogInformation("ID: {entry.Id.ToString()}");
+            logger.LogInformation("ID: {val}", entry.Id.ToString());
 
             // Map each key value pair
             Dictionary<string, string> dict = ParseResult(entry);
@@ -72,27 +72,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
             Data sampleItem = new Data { id = entry.Id, values = dict };
             items.Add(sampleItem);
         }
-
-        // Read through - WIP
-        [FunctionName(nameof(ReadThrough))]
-        public static void ReadThrough(
-                [RedisStreamTrigger(localhostSetting, "cosmosRead")] StreamEntry entry,
-                [CosmosDB(
-                    databaseName: "database-id",
-                    containerName: "container-id",
-                    Connection = "COSMOS_CONNECTION")]
-                    IReadOnlyList<Data> items,
-                ILogger logger)
-        {
-            // Search Redis reading stream for value
-
-
-            // Cache miss
-
-            // Failure: Not in CosmosDB
-            // Insert into Redis reading stream asynchronously
-            //await redisDB.StreamAddAsync("cosmosRead", entry.Values, maxLength: 100);
-        }
+        
     }
 }
 
