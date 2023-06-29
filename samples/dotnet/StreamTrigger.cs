@@ -15,7 +15,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
     {
 
         public const string localhostSetting = "REDIS_CONNECTION";
-        private static readonly IDatabaseAsync redisDB = ConnectionMultiplexer.ConnectAsync("pow-RedTrig.redis.cache.windows.net:6380,password=qSBG6V4sueLHLZMJoqBucrlvCERUgAgE4AzCaA9fBUI=,ssl=True,abortConnect=False,tiebreaker=").Result.GetDatabase();
+        private static readonly IDatabase redisDB = ConnectionMultiplexer.ConnectAsync("<cache-name>.redis.cache.windows.net:6380,password=<access-key>,ssl=True,abortConnect=False,tiebreaker=").Result.GetDatabase();
 
         // Parser helper function for reading results
         public static Dictionary<string, string> ParseResult(StreamEntry entry) => entry.Values.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
@@ -44,6 +44,9 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
             // Insert into CosmosDB asynchronously
             Data sampleItem = new Data { id = entry.Id, values = dict };
             await items.AddAsync(sampleItem);
+
+            // Insert into Redis reading stream asynchronously
+            await redisDB.StreamAddAsync("cosmosRead", entry.Values, maxLength: 100);
         }
 
 
@@ -71,6 +74,9 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
             // Insert into CosmosDB synchronously
             Data sampleItem = new Data { id = entry.Id, values = dict };
             items.Add(sampleItem);
+
+            // Insert into Redis reading stream asynchronously
+            redisDB.StreamAdd("cosmosRead", entry.Values, maxLength: 100);
         }
         
     }
