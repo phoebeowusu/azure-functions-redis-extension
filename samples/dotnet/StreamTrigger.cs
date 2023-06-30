@@ -17,7 +17,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
         public const string localhostSetting = "REDIS_CONNECTION";
         private static readonly IDatabase redisDB = ConnectionMultiplexer.ConnectAsync("<cache-name>.redis.cache.windows.net:6380,password=<access-key>,ssl=True,abortConnect=False,tiebreaker=").Result.GetDatabase();
 
-        // Parser helper function for reading results
+        // Parser helper function for reading results - https://developer.redis.com/develop/dotnet/streams/stream-basics/#spin-up-most-recent-element-task
         public static Dictionary<string, string> ParseResult(StreamEntry entry) => entry.Values.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
 
         // Write behind
@@ -75,7 +75,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
             Data sampleItem = new Data { id = entry.Id, values = dict };
             items.Add(sampleItem);
 
-            // Insert into Redis reading stream asynchronously
+            // Insert into Redis reading stream synchronously
             redisDB.StreamAdd("cosmosRead", entry.Values, maxLength: 100);
         }
         
