@@ -1,13 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
-using System.Threading.Tasks;
-using Microsoft.Azure.Cosmos;
-using System.Linq;
-using System.Collections.Generic;
-using System.Configuration;
 using StackExchange.Redis;
-using Microsoft.WindowsAzure.Storage.Queue.Protocol;
-using Microsoft.Azure.WebJobs;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
 {
@@ -16,13 +11,10 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
         public const string localhostSetting = "REDIS_CONNECTION";
         private static readonly IDatabase redisDB = ConnectionMultiplexer.Connect(Environment.GetEnvironmentVariable("REDIS_CONNECTION")).GetDatabase();
 
-        // Parser helper function for reading results - https://developer.redis.com/develop/dotnet/streams/stream-basics/#spin-up-most-recent-element-task
-        public static Dictionary<string, string> ParseResult(StreamEntry entry) => entry.Values.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
-
         // Write behind
         [FunctionName(nameof(WriteBehindAsync))]
         public static async Task WriteBehindAsync(
-                [RedisStreamTrigger(localhostSetting, "stream1")] StreamEntry entry,
+                [RedisStreamTrigger(localhostSetting, "streamTest")] StreamEntry entry,
                 [CosmosDB(
                 databaseName: "database-id",
                 containerName: "container-id",
@@ -37,7 +29,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
         // Write through
         [FunctionName(nameof(WriteThrough))]
         public static void WriteThrough(
-                [RedisStreamTrigger(localhostSetting, "stream1")] StreamEntry entry,
+                [RedisStreamTrigger(localhostSetting, "streamTest")] StreamEntry entry,
                 [CosmosDB(
                 databaseName: "database-id",
                 containerName: "container-id",
@@ -52,14 +44,10 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
         private static Data FormatData(StreamEntry entry, ILogger logger)
         {
             logger.LogInformation("ID: {val}", entry.Id.ToString());
+            
 
             // Map each key value pair
-            Dictionary<string, string> dict = ParseResult(entry);
-
-            foreach (KeyValuePair<string, string> item in dict)
-            {
-                logger.LogInformation(item.Key + " => " + item.Value);
-            }
+            Dictionary<string, string> dict = RedisUtilities.StreamEntryToDictionary(entry);
 
             Data sampleItem = new Data { id = entry.Id, values = dict };
             return sampleItem;
