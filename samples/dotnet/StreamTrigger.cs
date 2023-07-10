@@ -45,7 +45,6 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
         {
             logger.LogInformation("ID: {val}", entry.Id.ToString());
             
-
             // Map each key value pair
             Dictionary<string, string> dict = RedisUtilities.StreamEntryToDictionary(entry);
 
