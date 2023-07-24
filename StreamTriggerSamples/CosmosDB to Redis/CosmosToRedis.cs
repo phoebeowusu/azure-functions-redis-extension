@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
                     values[i++] = new NameValueEntry(entry.Key, entry.Value);
                 }
 
-                redisDB.StreamAdd("stream2", values);
+                redisDB.StreamAdd("streamTest3", values);
             }
         }
     }

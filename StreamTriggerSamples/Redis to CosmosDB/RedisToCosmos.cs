@@ -14,7 +14,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
         // Write through
         [FunctionName(nameof(WriteThrough))]
         public static void WriteThrough(
-                [RedisStreamTrigger(localhostSetting, "streamTest2")] StreamEntry entry,
+                [RedisStreamTrigger(localhostSetting, "streamTest1")] StreamEntry entry,
                 [CosmosDB(
                 databaseName: "database-id",
                 containerName: "container-id",
