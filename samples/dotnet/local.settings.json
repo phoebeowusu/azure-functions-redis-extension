@@ -3,9 +3,7 @@
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet",
-    "pubsubChannel": "resolvedChannel",
-    "REDIS_CONNECTION": "<redis-primary-connection-string>",
-    "COSMOS_CONNECTION": "<cosmosDB-primary-connection-string>"
+    "pubsubChannel": "resolvedChannel"
   },
   "ConnectionStrings": {
     "redisLocalhost": "127.0.0.1:6379"
