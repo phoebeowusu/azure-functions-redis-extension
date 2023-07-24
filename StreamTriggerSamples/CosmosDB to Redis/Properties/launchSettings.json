@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "CosmosDB_to_Redis": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7045",
+      "launchBrowser": false
+    }
+  }
+}
