@@ -15,17 +15,30 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
         [FunctionName(nameof(WriteThrough))]
         public static void WriteThrough(
                 [RedisStreamTrigger(localhostSetting, "streamTest2")] StreamEntry entry,
-                /*
-                 [CosmosDB(
+                [CosmosDB(
                 databaseName: "database-id",
                 containerName: "container-id",
                 Connection = "cosmosConnectionString")]
                 ICollector<Data> items,
-                 */
                 ILogger logger)
         {
             // Insert data into CosmosDB synchronously
-            // items.Add(FormatData(entry, logger));
+            items.Add(FormatData(entry, logger));
+        }
+
+        // Write behind
+        [FunctionName(nameof(WriteBehindAsync))]
+        public static async Task WriteBehindAsync(
+                [RedisStreamTrigger(localhostSetting, "streamTest2")] StreamEntry entry,
+                [CosmosDB(
+                databaseName: "database-id",
+                containerName: "container-id",
+                Connection = "cosmosConnectionString")]
+                IAsyncCollector<Data> items,
+                ILogger logger)
+        {
+            // Insert data into CosmosDB asynchronously
+            await items.AddAsync(FormatData(entry, logger));
         }
 
         private static Data FormatData(StreamEntry entry, ILogger logger)
