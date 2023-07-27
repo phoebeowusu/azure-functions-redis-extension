@@ -1,7 +1,5 @@
-﻿using Microsoft.Azure.WebJobs;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -9,13 +7,26 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
 {
     public static class RedisToCosmos
     {
-        public const string localhostSetting = "redisConnectionString";
+        // Redis connection string and stream names stored in local.settings.json
+        public const string redisLocalHost = "redisConnectionString";
+        public const string stream1 = nameof(WriteThrough);
+        public const string stream2 = nameof(WriteBehindAsync);
 
-        // Write through
+        // CosmosDB connection string, database name and container name stored in local.settings.json
+        public const string cosmosConnectionString = "cosmosConnectionString";
+        public const string cosmosDatabase = "%database-id%";
+        public const string cosmosContainer = "%container-id%";
+
+        /// <summary>
+        /// Write through: Write to CosmosDB synchronously whenever a new value is added to the Redis Stream
+        /// </summary>
+        /// <param name="entry"> The message which has gone through the stream. Includes message id alongside the key/value pairs </param>
+        /// <param name="items"> Container for where the CosmosDB items are stored </param>
+        /// <param name="logger"> ILogger used to write key information </param>
         [FunctionName(nameof(WriteThrough))]
         public static void WriteThrough(
-                [RedisStreamTrigger(localhostSetting, nameof(WriteThrough))] StreamEntry entry,
-                [CosmosDB(
+                [RedisStreamTrigger(redisLocalHost, nameof(WriteThrough))] StreamEntry entry,
+                 [CosmosDB(
                 databaseName: "database-id",
                 containerName: "container-id",
                 Connection = "cosmosConnectionString")]
@@ -26,14 +37,19 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
             items.Add(FormatData(entry, logger));
         }
 
-        // Write behind
+        /// <summary>
+        /// Write behind: Write to CosmosDB asynchronously whenever a new value is added to the Redis Stream
+        /// </summary>
+        /// <param name="entry"> The message which has gone through the stream. Includes message id alongside the key/value pairs </param>
+        /// <param name="items"> Container for where the CosmosDB items are stored </param>
+        /// <param name="logger"> ILogger used to write key information </param>
         [FunctionName(nameof(WriteBehindAsync))]
         public static async Task WriteBehindAsync(
-                [RedisStreamTrigger(localhostSetting, nameof(WriteBehindAsync))] StreamEntry entry,
+                [RedisStreamTrigger(redisLocalHost, nameof(WriteBehindAsync))] StreamEntry entry,
                 [CosmosDB(
-                databaseName: "database-id",
-                containerName: "container-id",
-                Connection = "cosmosConnectionString")]
+                databaseName: cosmosDatabase,
+                containerName: cosmosContainer,
+                Connection = cosmosConnectionString)]
                 IAsyncCollector<Data> items,
                 ILogger logger)
         {
@@ -41,6 +57,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
             await items.AddAsync(FormatData(entry, logger));
         }
 
+        // Helper method to format stream message
         private static Data FormatData(StreamEntry entry, ILogger logger)
         {
             logger.LogInformation("ID: {val}", entry.Id.ToString());
@@ -52,10 +69,4 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
             return sampleItem;
         }
     }
-}
-
-public class Data
-{
-    public string id { get; set; }
-    public Dictionary<string, string> values { get; set; }
 }

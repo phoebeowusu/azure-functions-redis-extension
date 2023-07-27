@@ -3,23 +3,31 @@ using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
 {
-    internal class CosmosToRedis
+    public class CosmosToRedis
     {
+        // Redis database and stream stored in local.settings.json
         private static readonly IDatabase redisDB = ConnectionMultiplexer.Connect(Environment.GetEnvironmentVariable("redisConnectionString")).GetDatabase();
+        public const string stream = nameof(CosmosToRedis);
 
-        // Write Around - Cosmos DB to Redis 
+        // CosmosDB connection string, database name and container name stored in local.settings.json
+        public const string cosmosConnectionString = "cosmosConnectionString";
+        public const string cosmosDatabase = "%database-id%";
+        public const string cosmosContainer = "%container-id%";
+
+        /// <summary>
+        /// Write Around: Write from Cosmos DB to Redis whenever a change occurs in one of the CosmosDB documents
+        /// </summary>
+        /// <param name="input"> List of changed documents in CosmosDB </param>
+        /// <param name="logger"> ILogger used to write key information </param>
         [FunctionName("CosmosToRedis")]
         public static void Run(
             [CosmosDBTrigger(
-                databaseName: "database-id",
-                containerName: "container-id",
-                Connection = "cosmosConnectionString",
+                databaseName: cosmosDatabase,
+                containerName: cosmosContainer,
+                Connection = cosmosConnectionString,
                 LeaseContainerName = "leases",
                 CreateLeaseContainerIfNotExists = true)]IReadOnlyList<Data> input, ILogger logger)
         {
@@ -32,14 +40,8 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Samples
                     values[i++] = new NameValueEntry(entry.Key, entry.Value);
                 }
 
-                redisDB.StreamAdd("streamTest3", values);
+                redisDB.StreamAdd(stream, values);
             }
         }
     }
-}
-
-public class Data
-{
-    public string id { get; set; }
-    public Dictionary<string, string> values { get; set; }
 }

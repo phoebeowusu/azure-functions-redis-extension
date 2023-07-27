@@ -1,4 +1,6 @@
 ﻿using Microsoft.Azure.Cosmos;
+using Microsoft.Azure.Cosmos.Linq;
+using Microsoft.Azure.WebJobs.Extensions.Redis.Samples;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using System;
@@ -88,7 +90,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Tests.Integration
         {
             string filepath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                 ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"npm\node_modules\azure-functions-core-tools\bin\func.exe")
-                : @"/usr/bin/func"; 
+                : @"/usr/bin/func";
             if (!File.Exists(filepath))
             {
                 throw new FileNotFoundException($"Azure Functions Core Tools not found at {filepath}");
@@ -106,35 +108,38 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Tests.Integration
             return value.GetType().FullName + ":" + JsonConvert.SerializeObject(value);
         }
 
+        
         internal static async Task<string> getCosmosDBValuesAsync(string id)
         {
-            CosmosClient client = new (
+
+            CosmosClient client = new CosmosClient(
                  connectionString: Environment.GetEnvironmentVariable("cosmosConnectionString")!
                 );
-            Database db =  client.GetDatabase("database-id");
-            Container container =  db.GetContainer("container-id");
-            string vals = id;
+            Container container = client.GetDatabase("database-id").GetContainer("container-id");
 
-            using FeedIterator<Data> feed = container.GetItemQueryIterator<Data>(
-                queryText: "SELECT * FROM c"
-            );
+            // Get LINQ IQueryable object
+            IOrderedQueryable<Data> queryable = container.GetItemLinqQueryable<Data>();
 
-            // Iterate query result pages
-            while (feed.HasMoreResults)
+            // Construct LINQ query
+            var matches = queryable
+                .Where(p => p.id == id);
+
+            // Convert to feed iterator
+            using FeedIterator<Data> linqFeed = matches.ToFeedIterator();
+            FeedResponse<Data> response = await linqFeed.ReadNextAsync();
+
+            var item = response.FirstOrDefault(defaultValue: null);
+            if (item != null)
             {
-                FeedResponse<Data> response = await feed.ReadNextAsync();
-
-                // Iterate query results
-                foreach (Data item in response)
+                foreach (KeyValuePair<string, string> entry in item.values)
                 {
-                    foreach(KeyValuePair<string,string> entry in item.values)
-                    {
-                        vals += " " + entry.Key + " " + entry.Value;
-                    }
-                    return vals;
+                    id += " " + entry.Key + " " + entry.Value;
                 }
+                return id;
             }
+           
             return " ";
         }
+        
     }
 }

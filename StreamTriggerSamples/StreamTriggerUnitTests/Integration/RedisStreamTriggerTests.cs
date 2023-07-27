@@ -1,13 +1,12 @@
-﻿using StackExchange.Redis;
+﻿using Microsoft.Azure.WebJobs.Extensions.Redis.Samples;
+using Newtonsoft.Json;
+using StackExchange.Redis;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Newtonsoft.Json;
 using System.Threading.Tasks;
 using Xunit;
-using Microsoft.Azure.WebJobs.Extensions.Redis.Samples;
 
 namespace Microsoft.Azure.WebJobs.Extensions.Redis.Tests.Integration
 {
@@ -15,9 +14,10 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Tests.Integration
     public class RedisStreamTriggerTests
     {
         [Fact]
-        public async void StreamTrigger_SuccessfullyTriggers()
+        public async void WriteThrough_SuccessfullyTriggers()
         {
-            string functionName = nameof(RedisToCosmos.WriteThrough);
+            string functionName = nameof(Samples.RedisToCosmos.WriteThrough);
+            string streamName = Samples.RedisToCosmos.stream1;
             string[] namesArray = new string[] { "a", "c" };
             string[] valuesArray = new string[] { "b", "d" };
 
@@ -32,12 +32,12 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Tests.Integration
                 { $"Executed '{functionName}' (Succeeded", 1},
             };
 
-            using (ConnectionMultiplexer multiplexer = ConnectionMultiplexer.Connect(RedisUtilities.ResolveConnectionString(IntegrationTestHelpers.localsettings, RedisToCosmos.localhostSetting)))
+            using (ConnectionMultiplexer multiplexer = ConnectionMultiplexer.Connect(RedisUtilities.ResolveConnectionString(IntegrationTestHelpers.localsettings, Samples.RedisToCosmos.redisLocalHost)))
             using (Process functionsProcess = IntegrationTestHelpers.StartFunction(functionName, 7072))
             {
                 functionsProcess.OutputDataReceived += IntegrationTestHelpers.CounterHandlerCreator(counts);
 
-                await multiplexer.GetDatabase().StreamAddAsync(functionName, nameValueEntries);
+                await multiplexer.GetDatabase().StreamAddAsync(streamName, nameValueEntries);
 
                 await Task.Delay(TimeSpan.FromSeconds(4));
 
@@ -48,11 +48,11 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Tests.Integration
             Assert.False(incorrect.Any(), JsonConvert.SerializeObject(incorrect));
         }
 
-        
         [Fact]
         public async void SuccesfullyInCosmosDB()
         {
-            string functionName = nameof(RedisToCosmos.WriteThrough);
+            string functionName = nameof(Samples.RedisToCosmos.WriteThrough);
+            string streamName = Samples.RedisToCosmos.stream1;
             string[] namesArray = new string[] { "a", "c" };
             string[] valuesArray = new string[] { "b", "d" };
             string messageId;
@@ -63,10 +63,10 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Tests.Integration
                 nameValueEntries[i] = new NameValueEntry(namesArray[i], valuesArray[i]);
             }
 
-            using (ConnectionMultiplexer multiplexer = ConnectionMultiplexer.Connect(RedisUtilities.ResolveConnectionString(IntegrationTestHelpers.localsettings, RedisToCosmos.localhostSetting)))
+            using (ConnectionMultiplexer multiplexer = ConnectionMultiplexer.Connect(RedisUtilities.ResolveConnectionString(IntegrationTestHelpers.localsettings, Samples.RedisToCosmos.redisLocalHost)))
             using (Process functionsProcess = IntegrationTestHelpers.StartFunction(functionName, 7072))
             {
-                messageId = await multiplexer.GetDatabase().StreamAddAsync(functionName, nameValueEntries);
+                messageId = await multiplexer.GetDatabase().StreamAddAsync(streamName, nameValueEntries);
                 await Task.Delay(TimeSpan.FromSeconds(4));
 
                 await multiplexer.CloseAsync();
@@ -75,5 +75,7 @@ namespace Microsoft.Azure.WebJobs.Extensions.Redis.Tests.Integration
 
             Assert.Equal(IntegrationTestHelpers.getCosmosDBValuesAsync(messageId).Result, messageId + " a c d b");
         }
+
+
     }
 }
